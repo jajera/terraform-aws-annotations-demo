@@ -1,0 +1,9 @@
+# Copy to terraform.tfvars and edit when you want a scheduled ingest run.
+# terraform.tfvars is loaded automatically and is not required for destroy.
+
+# enable_scheduler = true
+# schedule_time    = "2026-06-19T08:00:00"  # future UTC, format YYYY-MM-DDTHH:mm:ss
+
+# deploy_amplify_on_apply = true  # set false to skip frontend build on apply
+
+# enable_dynamodb = false

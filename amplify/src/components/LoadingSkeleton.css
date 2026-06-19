@@ -1,0 +1,56 @@
+.loading-skeleton {
+  pointer-events: none;
+}
+
+.skeleton-card {
+  background: var(--surface);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  padding-bottom: 0.75rem;
+}
+
+.skeleton-card__thumbnail {
+  height: 180px;
+  background: linear-gradient(
+    90deg,
+    var(--skeleton-base) 25%,
+    var(--skeleton-shine) 50%,
+    var(--skeleton-base) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+.skeleton-card__line {
+  height: 0.75rem;
+  margin: 0.75rem 0.75rem 0.5rem;
+  border-radius: 4px;
+  background: var(--skeleton-base);
+}
+
+.skeleton-card__line--short {
+  width: 60%;
+}
+
+.skeleton-card__chips {
+  display: flex;
+  gap: 0.35rem;
+  padding: 0 0.75rem;
+}
+
+.skeleton-card__chip {
+  width: 3.5rem;
+  height: 1.25rem;
+  border-radius: 12px;
+  background: var(--skeleton-base);
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

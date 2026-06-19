@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="S3 volcano camera">
+  <rect width="32" height="32" rx="7" fill="#0f172a"/>
+  <path fill="#FF9900" d="M5 21h22v7H5z"/>
+  <path fill="#FFB84D" d="M3 18.5h26v3.5H3z"/>
+  <ellipse cx="16" cy="18.5" rx="13" ry="2.2" fill="#E88B00"/>
+  <path fill="#1e293b" d="M9 21l7-11 7 11z"/>
+  <path fill="#334155" d="M11.5 21l4.5-7 4.5 7z"/>
+  <ellipse cx="16" cy="8.5" rx="2.8" ry="2.2" fill="#cbd5e1" opacity="0.95"/>
+  <ellipse cx="14.2" cy="6.2" rx="2" ry="1.6" fill="#e2e8f0" opacity="0.85"/>
+  <ellipse cx="17.5" cy="5.5" rx="1.4" ry="1.1" fill="#f8fafc" opacity="0.75"/>
+  <path fill="#2563eb" opacity="0.35" d="M5 24.5h22v1.2H5z"/>
+</svg>
