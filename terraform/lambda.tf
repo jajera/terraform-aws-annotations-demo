@@ -54,14 +54,15 @@ resource "aws_lambda_function" "api" {
   handler          = "handler.handler"
   filename         = "${path.module}/.build/api.zip"
   source_code_hash = data.external.lambda_packages.result.api_hash
-  timeout          = 30
-  memory_size      = 256
+  timeout          = 29
+  memory_size      = 512
 
   environment {
     variables = {
-      PRIVATE_BUCKET         = aws_s3_bucket.private_bucket.id
-      DYNAMODB_TABLE         = var.enable_dynamodb ? "volcano-annotations" : ""
-      PRESIGN_EXPIRY_SECONDS = "900"
+      PRIVATE_BUCKET           = aws_s3_bucket.private_bucket.id
+      DYNAMODB_TABLE           = var.enable_dynamodb ? "volcano-annotations" : ""
+      PRESIGN_EXPIRY_SECONDS   = "900"
+      ANNOTATION_FETCH_WORKERS = "48"
     }
   }
 }
