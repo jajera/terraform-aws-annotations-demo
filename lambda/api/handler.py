@@ -95,39 +95,77 @@ def _fetch_annotation_for_key(s3, bucket: str, key: str) -> dict | None:
         return None
 
 
-def _query_annotations(s3, bucket: str, filters: dict) -> list[dict]:
-    """List objects in the private bucket and retrieve their annotations.
-
-    Returns a list of dicts with 'key' and 'tags' for each annotated object
-    that matches the supplied filters.
-    """
+def _list_bucket_keys(s3, bucket: str) -> list[str]:
+    """List object keys in the private bucket, newest first."""
     keys: list[str] = []
     paginator = s3.get_paginator("list_objects_v2")
     for page in paginator.paginate(Bucket=bucket):
         for obj in page.get("Contents", []):
             keys.append(obj["Key"])
+    keys.sort(reverse=True)
+    return keys
 
+
+def _fetch_annotations_for_keys(s3, bucket: str, keys: list[str]) -> list[dict]:
+    """Fetch annotations for a specific key list in parallel."""
     if not keys:
         return []
 
-    # Most-recent objects first so annotation fetches prioritize newer keys.
-    keys.sort(reverse=True)
-    max_workers = min(int(os.environ.get("ANNOTATION_FETCH_WORKERS", "32")), len(keys))
-    chunk_size = max_workers * 2
+    max_workers = min(int(os.environ.get("ANNOTATION_FETCH_WORKERS", "48")), len(keys))
     results: list[dict] = []
+    chunk_size = max_workers * 2
 
     for idx in range(0, len(keys), chunk_size):
         batch = keys[idx: idx + chunk_size]
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [executor.submit(_fetch_annotation_for_key, s3, bucket, key) for key in batch]
+            futures = [
+                executor.submit(_fetch_annotation_for_key, s3, bucket, key) for key in batch
+            ]
+            for future in as_completed(futures):
+                item = future.result()
+                if item is not None:
+                    results.append(item)
+
+    return results
+
+
+def _query_annotations(
+    s3, bucket: str, filters: dict, offset: int, limit: int
+) -> tuple[list[dict], int]:
+    """List objects and retrieve annotations for the requested page.
+
+    Without filters, only annotations for the current page are fetched so the
+    API stays within API Gateway's 30s integration timeout. With filters, all
+    annotations are scanned to compute an accurate total_available count.
+    """
+    keys = _list_bucket_keys(s3, bucket)
+    if not keys:
+        return [], 0
+
+    if not filters:
+        total_available = len(keys)
+        page_keys = keys[offset: offset + limit]
+        page_items = _fetch_annotations_for_keys(s3, bucket, page_keys)
+        page_items.sort(key=lambda i: i["tags"].get("captured_utc", ""), reverse=True)
+        return page_items, total_available
+
+    max_workers = min(int(os.environ.get("ANNOTATION_FETCH_WORKERS", "48")), len(keys))
+    chunk_size = max_workers * 2
+    matches: list[dict] = []
+
+    for idx in range(0, len(keys), chunk_size):
+        batch = keys[idx: idx + chunk_size]
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(_fetch_annotation_for_key, s3, bucket, key) for key in batch
+            ]
             for future in as_completed(futures):
                 item = future.result()
                 if item is not None and _matches_filters(item["tags"], filters):
-                    results.append(item)
+                    matches.append(item)
 
-    # Show newest captures first for faster operator workflows.
-    results.sort(key=lambda i: i["tags"].get("captured_utc", ""), reverse=True)
-    return results
+    matches.sort(key=lambda i: i["tags"].get("captured_utc", ""), reverse=True)
+    return matches[offset: offset + limit], len(matches)
 
 
 def _query_dynamodb(table_name: str) -> list[dict]:
@@ -196,28 +234,28 @@ def handler(event: dict, context) -> dict:
     # --- Query annotations or DynamoDB ---
     s3 = boto3.client("s3")
 
+    offset = validated.get("offset", 0)
+    limit = min(validated.get("limit", DEFAULT_LIMIT), MAX_ITEMS)
+    filter_criteria = {
+        key: value for key, value in validated.items() if key not in {"offset", "limit"}
+    }
+
     try:
         if env["dynamodb_table"]:
             all_items = _query_dynamodb(env["dynamodb_table"])
+            filtered_items = [
+                item for item in all_items if _matches_filters(item["tags"], filter_criteria)
+            ]
+            filtered_items.sort(key=lambda i: i["tags"].get("captured_utc", ""), reverse=True)
+            total_available = len(filtered_items)
+            page_items = filtered_items[offset: offset + limit]
         else:
-            all_items = _query_annotations(s3, env["private_bucket"], validated)
+            page_items, total_available = _query_annotations(
+                s3, env["private_bucket"], filter_criteria, offset, limit
+            )
     except Exception:
         logger.exception("Failed to query image metadata")
         return _build_error_response(500, "Failed to retrieve image data")
-
-    # S3 path already filters during query; DynamoDB path filters here.
-    if env["dynamodb_table"]:
-        filtered_items = [
-            item for item in all_items if _matches_filters(item["tags"], validated)
-        ]
-        filtered_items.sort(key=lambda i: i["tags"].get("captured_utc", ""), reverse=True)
-    else:
-        filtered_items = all_items
-
-    total_available = len(filtered_items)
-    offset = validated.get("offset", 0)
-    limit = min(validated.get("limit", DEFAULT_LIMIT), MAX_ITEMS)
-    page_items = filtered_items[offset: offset + limit]
 
     # --- Generate presigned URLs ---
     response_items: list[dict] = []
