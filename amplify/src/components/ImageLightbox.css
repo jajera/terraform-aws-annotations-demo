@@ -1,0 +1,62 @@
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.85);
+  cursor: zoom-out;
+}
+
+.lightbox__panel {
+  position: relative;
+  max-width: min(95vw, 1200px);
+  max-height: 95vh;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  cursor: default;
+}
+
+.lightbox__close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  z-index: 1;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+}
+
+.lightbox__image {
+  max-width: 100%;
+  max-height: calc(95vh - 6rem);
+  object-fit: contain;
+  border-radius: 8px;
+  background: #000;
+}
+
+.lightbox__meta {
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lightbox__meta time {
+  font-size: 0.8rem;
+  font-family: monospace;
+  color: var(--text-muted);
+}
